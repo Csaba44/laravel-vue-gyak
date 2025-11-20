@@ -1,59 +1,103 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+### Ötlet
+Egyszerű full basic webshop, adminfelülettel
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+MVP - Határidő 2025.12.02. - kedd (két hét): 
+Login/register/Logout
+Rendelés leadás, egyszerű adatokkal, nincs fizetés semmi komoly
+Rendeléseket nyomon lehet követni kis csúszkával, progress barral ami változik:
+Megrendelve, előkészítés alatt, futárnak átadva
 
-## About Laravel
+**Bővítésnek:**
+Role rendszer - Admin és Vásárló
+Admin tudjon rendelés státuszán változtatni
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+**User flow:**
+Login (/login)
+Vásárlás (/) - User kosárba rakhat terméket, mutatja mennyi van raktáron, és beírhatja hányat akar hozzáadni a kosárhoz. 
+Kosár (/basket) - User látja mit rendelt, ki tudja törölni, és tovább tud lépni leadni a rendelést
+Rendelés leadás (/order) - Irányítószámot, címet megadja, és leadja a rendelést
+Rendeléseim (/orders) - Látható az összes rendelést amit user adott le és rá lehet kattintani
+Nyomonkövetés (/orders/{id}) - ID alapján lekérhető a rendelés állapota
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+**Backend routes:**
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Auth:
+- /login POST
+- /register POST
+- /logout POST
 
-## Learning Laravel
+Termékek:
+- /products GET
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Rendelés:
+- /order GET POST (PUT DELETE)
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+***2025.11.18.***
+A sanctum, ahogy én értelmezem, egy authentikációs package. A következő parancs az API-hoz szükséges infrastruktúrát előkészíti, és a sanctumot is telepíti.
+`php artisan install api`
 
-## Laravel Sponsors
+### Auth
+A sanctum pont SPA-khoz lett kitalálva, így Vue-val tökéletes lesz számomra.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Találtam egy [medium cikket](https://medium.com/@abdelra7manabdullah/api-authentication-using-laravel-sanctum-v10-x-21dfe130cda) is, ahol leírják, hogy lehet létrehozni egy pár egyszerű funkciót: register, login, logout.
 
-### Premium Partners
+Ez alapján elkészítettem a route-okat, melyeket postmannel teszteltem, és működőképesnek találtam.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+A middlewarnek köszönhetően csak akkor érem el a logoutot, ha be vagyok jelentkezve:
+`Route::post('/logout', [UserAuthController::class, 'logout'])->middleware('auth:sanctum');`
 
-## Contributing
+A middleware-ek haszonsak, abból a szempontból, hogy szűrik a HTTP kéréseket. Így ahelyett, hogy minden controllerben ellenőrizném, hogy a user be van-e jelentkezve, a middleware beékeli magát a kérés mögé, és ha a user nincs bejelentkezve a következőt küldi vissza 401-es hibakóddal:
+`{"message": "Unauthenticated."}`
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Ha a user be van jelentkezve, tovább irányítja a kérést a megadott controller adott metódusának.
 
-## Code of Conduct
+*~ 1.5h*
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+***2025.11.20.***
+### Migrations
+Elkészítettem az alapvető migrációkat.
 
-## Security Vulnerabilities
+### Seeders
+Azért, hogy a teszt adatok migrate:fresh esetén is megmaradjanak, létrehoztam 4 seedert: UserSeeder és ProductSeeder, OrderSeeder, OrderProductSeeder
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Itt egy példa:
+`
+DB::table('users')->insert([
+  'name' => 'Gipsz Jakab',
+  'email' => 'gj@gmail.com',
+  'password' => Hash::make('gj123'),
+]);
+`
 
-## License
+Ezt a 'run' metóduson belül kell elhelyezni, és feltölti a users táblát az értékekkel. Több érték is megadható a seederben, pl.:
+`
+DB::table('products')->insert([
+  [
+    'name' => 'Borsodi világos sör 0,5L',
+    'price' => 350,
+    'stock_count' => 150
+  ],
+  [
+    'name' => 'Dreher classic sör 0,5L',
+    'price' => 360,
+    'stock_count' => 120
+  ],
+]);
+`
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+A következő paranccsal lehet őket futtatni:
+`php artisan db:seed`
+vagy, ha migrate:fresh-el együtt akarjuk
+`php artisan migrate:fresh --seed`
+
+### Models
+Elkészítettem a modeleket, és hogy teszteljem a 'tinker'-t használtam, ami egy beépített CLI eszköz a laravelben.
+Az alábbi parancsal nyitható meg:
+`php aritsan tinker`
+
+És így tudtam pl. az order-t letesztelni:
+`
+\> $order = \App\Models\Order::first(); # lekéri a legelső ordert a táblából
+\> $order->user->name
+= "Gipsz Jakab"
+`
