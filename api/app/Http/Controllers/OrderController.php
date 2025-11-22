@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrderRequest;
+use App\Http\Requests\UpdateOrderRequest;
 use App\Models\Order;
 use Illuminate\Http\Request;
 
@@ -35,9 +36,13 @@ class OrderController extends Controller
             $data['status'] = $request->status;
         }
 
-        Order::create($data);
+        $order = Order::create($data);
 
-        return response()->json(["message" => 'Order created', "success" => true], 201);
+        foreach ($request->products as $key => $item) {
+            $order->products()->attach($item['product_id'], ['count' => $item['count']]);
+        }
+
+        return response()->json(["message" => 'Order created', "order" => $order->load('products')], 201);
     }
 
     /**
@@ -53,9 +58,30 @@ class OrderController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(UpdateOrderRequest $request, Order $order)
     {
-        //
+        $order->update([
+            'postal_code' => $request->postal_code ?? $order->postal_code,
+            'address' => $request->address ?? $order->address,
+            'status' => $request->status ?? $order->status,
+        ]);
+
+        if (isset($request->products)) {
+            $syncData = [];
+
+            foreach ($request->products as $item) {
+                $syncData[$item['product_id']] = [
+                    'count' => $item['count']
+                ];
+            }
+
+            $order->products()->sync($syncData);
+        }
+
+        return response()->json([
+            'message' => 'Order updated',
+            'order' => $order->load('products'),
+        ]);
     }
 
     /**

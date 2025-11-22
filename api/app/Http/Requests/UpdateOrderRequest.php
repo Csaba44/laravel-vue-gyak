@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreOrderRequest extends FormRequest
+class UpdateOrderRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -20,18 +20,17 @@ class StoreOrderRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
-    /* 'user_id',
-        'postal_code',
-        'address',
-        'status'*/
     public function rules(): array
     {
         return [
-            'user_id' => 'required|integer',
-            'postal_code' => 'required|string|regex:/^\d{4}$/',
-            'address' => 'required',
-            'products' => 'required|array|min:1',
-            'status' => [Rule::in(['Megrendelve', 'Előkészítés alatt', 'Átadva a futárnak'])],
+            'postal_code' => 'sometimes|required|string',
+            'address' => 'sometimes|required|string',
+            'status' => ['sometimes', Rule::in(['Megrendelve', 'Előkészítés alatt', 'Átadva a futárnak'])],
+            
+            
+            'products' => 'sometimes|required|array|min:1',
+            'products.*.product_id' => 'required_with:products|exists:products,id',
+            'products.*.count' => 'required_with:products|integer|min:1',
         ];
     }
 }
