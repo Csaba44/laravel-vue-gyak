@@ -101,3 +101,38 @@ Az alábbi parancsal nyitható meg:
 \> $order->user->name
 = "Gipsz Jakab"
 `
+### Protected routes
+Egy protected route csak olyannak küld vissza adatot, aki be van jelentkezve. Tehát, az auth middleware-en keresztül megy a kérés. Ezeket a legkönnyebben úgy lehet megcsinálni, ha csinálunk egy group-ot, és azon belül helyezzük el a route-okat:
+`
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [UserAuthController::class, 'logout']);
+    Route::get('/products', [ProductController::class, 'index']);
+});
+`
+
+### Controllers
+Az API-hoz való controllereket a következő parancs hozza létre:
+`php artisan make:controller ProductController --api`
+Ezzel elkészül az alapvető API Controller scheme, benne a szükséges metódusokkal.
+
+***Eager loading***
+Tegyük fel, szeretném az orderrel együtt lekérni azt, hogy ki rendelte, és miket rendelt.
+Ebben az esetben a 'rossz' megoldás, lekérni az összes ordert és több lekérést végezni, hogy lekérjem azt is, hogy ki rendelte, és mit rendelt. Ez az n+1 lekérdezés problémája, amire az Eloquent az eager loading megoldását használhatjuk:
+`Order::with(['user', 'products'])->get()`
+Ezzel lekérjük az ordert, annak a user és a products relationjeit. Ezek ugyan azok a metódusok, amiket a modelben definiáltunk. Olyan, mintha ezt mondanám:
+`$order->user`
+Csak minden rekordra az adatbázisban, EGYETLEN lekérésből.
+
+### Requests
+Létrehozhatunk saját requesteket a laravelben, így:
+`php artisan make:request StoreOrderRequest`
+
+És ezt a controllerben a következőképp használhatjuk:
+`public function store(Request $request)`
+Helyette:
+`public function store(StoreOrderRequest $request)`
+
+A requestben van egy authorize és egy rules metódus alapból megírva. Az authorize metódus akkor jön jól, ha pl. role rendszer van kiépítve, és van egy request amit például csak adminnak lehet végrehajtani. Ebben az esetben itt tudjuk lecheckolni, hogy admin-e a user, és a megfelelő boolean-t visszaadni.
+
+Nekem egyelőre a rules metódus a fontos, ami hasonló, a request->validate-hez, ugyanúgy szabályokat tudunk megadni, hogy az egyes mezőknek hogy kell kinézni.
+
