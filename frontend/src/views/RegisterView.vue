@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from "vue";
-import axios from "axios";
+import api from "../../api";
 import Button from "../components/Button.vue";
 import Input from "../components/Input.vue";
 import Alert from "../components/Alert.vue";
@@ -23,9 +23,11 @@ const formSubmitted = async () => {
 
   try {
     loading.value = "Fiók létrehozása...";
-    const response = await axios.post("http://127.0.0.1:8000/api/register", formData.value);
+    const response = await api.post("/register", formData.value);
+    console.log(response);
     if (response.status == 201) success.value = response.data.message;
   } catch (error) {
+    console.log(error);
     if (error.response.status == 422) {
       const errs = error.response.data.errors;
       for (const key in errs) {

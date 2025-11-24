@@ -321,3 +321,27 @@ const formSubmitted = async () => {
   }
 };
 ```
+
+#### API refactoring
+A jobb megoldás az lenne, ha axios.POST(teljesURL) helyett egy saját axios instance-et tudnánk definiálni.
+Ez azért jó, mert nem kell mindig begépelni a teljes URL-t, és ha változik, elég egy helyen átírni. A későbbiekben tudunk még sok más hasznos dolgot is csinálni vele, mint például végrehajtani bizonyos tevékenységet bizonyos kérésekre, vagy akár logolni. Ez az egyszerű módosítás sok hasznos dolgot fog még eredményezni.
+
+Először is készítsük el az `api.js` file-t a `src/` mappába.
+
+Tartalma egy axios instance, amit kiexportálunk:
+```
+import axios from "axios";
+
+
+const api = axios.create({
+  baseURL: "http://127.0.0.1:8000/api/",
+  timeout: 1000,
+});
+
+export default api;
+```
+
+A baseURL-be kerül az API url.
+
+Ezután így tudjuk felhasználni: `const response = await api.post("/register", formData.value)`.
+Fontos: Ne az axios-t importáljuk ahol API hívást szeretnénk végrehajtani, hanem a saját axios instance-ünket. És ne `axios.post`-al hívjuk, hanem `api.post`-al, vagy bárhogy is van elnevezve a saját axios instance.
