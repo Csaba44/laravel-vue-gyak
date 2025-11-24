@@ -1,5 +1,11 @@
 # Frontend with Vue.js
 
+### Előkészületek
+Előkészületként két videót néztem meg:
+[Az első](https://www.youtube.com/watch?v=s9URD3PefTk) a Composition API működéséről,
+[A második](https://youtu.be/QB1p2iuQm_0?si=JoSmbaf_sf2A8KBr) pedig a Vue Best practices-ről szól.
+A leírásban feltételnek tekintem a két videó ismeretét, és nem térek ki arra, ami ott elhangzott.
+
 ### Routing
 
 A routinghoz a [Vue Routert](https://router.vuejs.org/) használtam, a dokumentációja elég érdekes, félig-meddig a régi API-ra épül, de használható. Találtam egy blog [bejegyzést arról](https://vueschool.io/articles/vuejs-tutorials/how-to-master-vue-router-in-vue-js-3-with-composition-api/) hogyan kellene használni jól a composition API-al.
