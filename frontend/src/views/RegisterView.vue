@@ -21,6 +21,11 @@ const formSubmitted = async () => {
   errors.value = [];
   success.value = null;
 
+  if (formData.value.password != formData.value.password2) {
+    errors.value.push("A két jelszó nem egyezik.");
+    return;
+  }
+
   try {
     loading.value = "Fiók létrehozása...";
     const response = await api.post("/register", formData.value);
