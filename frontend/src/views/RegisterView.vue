@@ -28,7 +28,7 @@ const formSubmitted = async () => {
     if (response.status == 201) success.value = response.data.message;
   } catch (error) {
     console.log(error);
-    if (error.response.status == 422) {
+    if (error.response && error.response.status == 422) {
       const errs = error.response.data.errors;
       for (const key in errs) {
         errors.value.push(errs[key][0]);

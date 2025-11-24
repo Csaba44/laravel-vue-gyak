@@ -264,7 +264,7 @@ const formSubmitted = async () => {};
 5. A catch blokk:
 - *(#7)*Ha hibára jutunk: Ellenőrizzük, hogy 422-es hibakódot (Unprocessable Content) kaptunk-e, azaz a user nem töltött ki valamit megfelelően, vagy például használatban van az email. Ez esetben, menjünk végig a hibákon, és rakjuk bele őket az errors ref-be. Ha a hibakód bármi más, pl.: 500 Internal Server Error írjunk ki egy általános hibaüzenetet.
 ```
-if (error.response.status == 422) {
+if (error.response && error.response.status == 422) {
   const errs = error.response.data.errors;
   for (const key in errs) {
     errors.value.push(errs[key][0]);
@@ -273,6 +273,7 @@ if (error.response.status == 422) {
   errors.value.push("Ismeretlen hiba történt.");
 }
 ```
+Azért ellenőrizzük az error.response létezését, mert ha például nincs internetkapcsolat, vagy timeot van, akkor az error.response nem létezhet.
 
 6. Finally block:
 - *Magyarázat:* A try-catch-nek van egy harmadik blokkja is, a finally, ami minden esetben lefut, amikor a try/catch a futásciklus végére ér.
@@ -335,13 +336,13 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: "http://127.0.0.1:8000/api/",
-  timeout: 1000,
+  timeout: 10000,
 });
 
 export default api;
 ```
 
-A baseURL-be kerül az API url.
+A baseURL-be kerül az API url. A timeout arra való, hogy a ms-ben megadott idő után automatikusan megszakítja a próbálkozást, és hibát dobjon. 
 
 Ezután így tudjuk felhasználni: `const response = await api.post("/register", formData.value)`.
 Fontos: Ne az axios-t importáljuk ahol API hívást szeretnénk végrehajtani, hanem a saját axios instance-ünket. És ne `axios.post`-al hívjuk, hanem `api.post`-al, vagy bárhogy is van elnevezve a saját axios instance.
