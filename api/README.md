@@ -59,16 +59,16 @@ Elkészítettem az alapvető migrációkat.
 Azért, hogy a teszt adatok migrate:fresh esetén is megmaradjanak, létrehoztam 4 seedert: UserSeeder és ProductSeeder, OrderSeeder, OrderProductSeeder
 
 Itt egy példa:
-`
+```
 DB::table('users')->insert([
   'name' => 'Gipsz Jakab',
   'email' => 'gj@gmail.com',
   'password' => Hash::make('gj123'),
 ]);
-`
+```
 
 Ezt a 'run' metóduson belül kell elhelyezni, és feltölti a users táblát az értékekkel. Több érték is megadható a seederben, pl.:
-`
+```
 DB::table('products')->insert([
   [
     'name' => 'Borsodi világos sör 0,5L',
@@ -81,7 +81,7 @@ DB::table('products')->insert([
     'stock_count' => 120
   ],
 ]);
-`
+```
 
 A következő paranccsal lehet őket futtatni:
 `php artisan db:seed`
@@ -94,19 +94,19 @@ Az alábbi parancsal nyitható meg:
 `php aritsan tinker`
 
 És így tudtam pl. az order-t letesztelni:
-`
+```
 \> $order = \App\Models\Order::first(); # lekéri a legelső ordert a táblából
 \> $order->user->name
 = "Gipsz Jakab"
-`
+```
 ### Protected routes
 Egy protected route csak olyannak küld vissza adatot, aki be van jelentkezve. Tehát, az auth middleware-en keresztül megy a kérés. Ezeket a legkönnyebben úgy lehet megcsinálni, ha csinálunk egy group-ot, és azon belül helyezzük el a route-okat:
-`
+```
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [UserAuthController::class, 'logout']);
     Route::get('/products', [ProductController::class, 'index']);
 });
-`
+```
 
 ### Controllers
 Az API-hoz való controllereket a következő parancs hozza létre:
@@ -141,18 +141,16 @@ Nekem egyelőre a rules metódus a fontos, ami hasonló, a request->validate-hez
 Van az orders tábla ami a rendeléseket tárolja és a products táblában található az összes termék. Ezt a kettőt kapcsolótábla köti össze, mivel N:M kapcsolatúak. Itt még egy adat szerepe, a count, vagyis hogy user hány darabot vett az adott productból.
 
 Egy post request során meg kell adni az orders tábla szükséges adatait (név, cim, stb.), emellett a program vár egy products mezőt is, ahol listában kell megadni a termékeket a következő formátumban
-`
-"products": [{"product_id": 1, "count: 1"}, {"product_id": 2, count: 3}]
-`
+`"products": [{"product_id": 1, "count: 1"}, {"product_id": 2, count: 3}]`
 
 Itt ezt találtam a legjobb megoldásnak, és megvalósitásom a következő:
-`
+```
 $order = Order::create($data);
 
 foreach ($request->products as $key => $item) {
     $order->products()->attach($item['product_id'], ['count' => $item['count']]);
 }
-`
+```
 
 Elkészitjük az ordert, ami berakja az orders táblába a rendelést, az összes adatával. Emellett, végigmegyünk a post requestben bekért products-on, ami tartalmaz product_id-kat és count-okat. Az elkészitett orderhez hozzácsatolom az attach metódussal, és megadom a product_id-t (az order_id is kell a kapcsolótáblába, de ezt nem kell megadni, hiszen az $order-re hivom az attach metódust, ezáltal tudja a saját ID-ját) és megadok egy listát a második argumentumként, ide kellenek a pivottábla adatai, asszociativ tömbként megadva, kulccsal és értékkel. A kulcs lesz a pivottábla mezője, az érték pedig az értéke.
 
@@ -164,7 +162,7 @@ Az update-nek is hasonló a módszere, viszont itt a model sync metódusáát ha
 Megvalósitás a következő:
 
 #### Validációk
-`
+```
 'postal_code' => 'sometimes|required|string',
 'address' => 'sometimes|required|string',
 'status' => ['sometimes', Rule::in(['Megrendelve', 'Előkészítés alatt', 'Átadva a futárnak'])],
@@ -173,38 +171,38 @@ Megvalósitás a következő:
 'products' => 'sometimes|required|array|min:1',
 'products.*.product_id' => 'required_with:products|exists:products,id',
 'products.*.count' => 'required_with:products|integer|min:1',
-`
+```
 
 A sometimes egy számomra új validációs szabály, amely a következőt teszi: alapból nem muszáj megadni semmit sem, viszont ha megadok valamit, akkor a sometimes utáni paraméterek lecsekkolják, hogy amit megadtam, helyes-e. Pl.: csak postal codeot adok meg, de ha az nem egy string akkor hibát ad. Viszont másra, amit egyáltalán nem adtam meg, arra nem dob hibát. Igy az egész Order elküldése nélkül tudunk updatelni, úgy, hogy nem az új Ordert adjuk meg amit látni szeretnénk, csak azt, hogy minek kell változnia.
 
 #### Route model bindig
 A laravel engedi a route model bindingot, azaz, a requestben ID-t adunk meg, de a laravel automatikusan megkeresi a számunkra megfelelő Order modelt, és ezzel nekünk már nem kell bajlódni. Megvalósitás a következő:
-`
+```
 Route::put('/orders/{order}', [OrderController::class, 'update']);
-`
+```
 {id} helyett {order}-t irok be a route cimébe, itt semmi egyéb nem változik.
 
 A controllerben:
-`
+```
 public function update(UpdateOrderRequest $request, Order $order)
-`
+```
 Tehát `$string id` helyett `Order $order` van irva, ezáltal fog müködni a route-model binding.
 
 #### Sync a kapcsoló táblával
 Az order-t updateljük, azokkal a paraméterekkel, amik meg vannak adva:
-`
+```
 $order->update([
     'postal_code' => $request->postal_code ?? $order->postal_code,
     'address' => $request->address ?? $order->address,
     'status' => $request->status ?? $order->status
 ]);
-`
+```
 Feltételes szintaktika:
 Megvan adva? Akkor legyen a megadott. Nincs megadva? Akkor legyen az eredeti.
 
 A következő a kapcsolótáblával való szinkronizálás. Ezt a módszert választottam, mivel igy a legegyszerübb eltávolitani és új termékeket is hozzáadni az orderhez. Eltávolitáshoz egyszerüen csak nem rakjuk bele a products listába a requestnél, uj hozzáadásánál csak simán megadjuk az előzőeket és az újat egy listában.
 Megvalósitása:
-`
+```
 if (isset($request->products)) {
     $syncData = [];
 
@@ -216,24 +214,24 @@ if (isset($request->products)) {
 
     $order->products()->sync($syncData);
 }
-`
+```
 Az egész csak akkor fut le, ha van products megadva. Ha nem, akkor változatlannak tekintjük és nem módositunk semmit, tehát az előző termékek megmaradnak 1/1.
 
 Sync data táblában a termékeket tároljuk a következő formában:
-`
+```
 [
   termék-id => ["count" => darabszám]
 ]
-`
+```
 
 Tehát az asszociativ tömb minden elemének a kulcsa egy termék id, és az értéke pedig egy lista a pivot tábla értékeivel, ez esetben egy van: count.
 
 Végül, miután hozzáadtuk ebben a formában a termékeket, meghivjuk az order products metódusára a syncet. Ez megadja a laravelnek, hogy az order_product kapcsolótáblát synceljük és paraméterként a syncData pedig megadja, hogy mi kerüljön be, és mi kerüljön ki a táblából.
 
 Legvégül csak visszaküldünk egy JSON-t üzenettel, és a módositott orderrel amibe eager loadolva van a products:
-`
+```
 return response()->json([
     'message' => 'Order updated',
     'order' => $order->load('products'),
 ]);
-`
+```
