@@ -143,8 +143,8 @@ Teszt: `<h1 class="font-bold">asd</h1>`
 
 ### RegisterView
 A RegisterView két máshol is felhasználható komponensből fog állni (? = not required):
-- Button (Props: type?) (Emits: click)
-- Input (Props: name, label, placeholder?, type?, class?) (Models: model) (Emits: Ø)
+- Button (Props: type?, disabled?) (Emits: click)
+- Input (Props: name, label, placeholder?, type?, class?, disabled?) (Models: model) (Emits: Ø)
 
 **Button:**
 Ez a könnyebbik. Bekér egy prop-ot, ami a type (pl.: button vagy submit). Ezt nem kötelező megadni. A :type v-bind-al adjuk meg neki. A v-on segítségével a click eseményen emitelünk egy 'click' emitet. 
@@ -205,4 +205,119 @@ const props = defineProps(...);
 
 // Felhasználása:
 <Input name="password" type="password" label="Jelszó: " placeholder="***" v-model="formData.password" />
+```
+
+#### Regisztráció logika
+Lépésről lépésre:
+1. Létre kell hozni egy formot, benne az előzőleg elkészített input és button komponensekkel
+2. Egy refben eltárolni az értéküket, és létrehozni ref-eket a hibáknak és a sikernek.
+3. Gombnyomásra meghívni egy metódust, ami elkezdi a regisztrációs folyamatot
+4. Be kell állítani a loadingot egy üzenetre
+5. Meg kell hívni az API-t
+6. Ellenőrizni, hogy 201-et ad-e vissza, vagy hibát
+7. Ki kell írni a hibát/sikert
+8. Loading => off
+
+*1. Form:*
+A form-nak egy attribútum fog kelleni kötelezően, az on-submit:
+`@submit.prevent="formSubmitted"`
+A prevent arra szolgál, hogy az oldal ne frissüljön automatikusan gombnyomásra. HTML5-ben a form-ra ha nincs beállítva ilyen tulajdonság, akkor automatikusan frissül az oldal, amikor elküldik a formot, mivel az `action` attribútum nincs definiálva. Erre szolgál javascriptben az event.preventDefault() is, de ezt a Vue megoldja helyettünk, ha odaírjuk, hogy `.prevent`.
+
+*2. Ref-ek:*
+Kell egy ref, ahol tároljuk a form adatokat.
+
+```
+const formData = ref({
+  name: "",
+  email: "",
+  password: "",
+  password2: "",
+});
+```
+
+Emellett, kell kettő ref a hibák és a siker tárolására.
+```
+const errors = ref([]);
+const success = ref(null);
+```
+
+Az hibákat listában tárolom, hiszen egyszerre több hibád is lehet (nem töltesz ki semmit).
+
+*3. Meghívni a metódust és elkezdeni a regisztrációt:*
+Valójában ez már félig kész van, csak el kell készíteni a formSubmitted metódust, ami egy async metódus lesz, mivel API hívást végzünk benne:
+
+1. 
+`
+const formSubmitted = async () => {};
+`
+
+2. Feltételezzük, hogy lehetséges, hogy a user már megpróbált regisztrálni egyszer, de hibát kapott. Ezért állítsuk az errors-t és a success-t az alap értékükre, ami üres lista ([]) és null.
+
+3. Hiba lehetősége fennáll, hiszen lehet, hogy lehalt a backend. Ezért try-catch blokkba kell tenni az API hívásunkat, hogy ne haljon le miatta a frontend is.
+
+4. A try blokk:
+- *(#4)* Állítsuk a loading értét valamilyen üzenetre, például "Fiók létrehozása folyamatban, kérjük várjon..."
+- *(#5)* Hívjuk az API-t: `const response = await axios.post("http://127.0.0.1:8000/api/register", formData.value);` Az axios-t használom, ami telepíthető az `npm install axios` paranccsal és importálás után már használható is a [dokumentációban](https://axios-http.com/docs/post_example) leírt módon. Valójában egy JavaScript fetch API felturbózva, sok olyan lehetőséggel, ami könnyebbé teszi a fejlesztő életét.
+- *(#6-7)* Ezen a ponton, két lehetőség van: vagy hibára jutott a kérésünk, vagy sikerült. Ezt a response.status egyértelműen visszaadja, hiszen tartalmazza a státuszkódot. Ellenőrizzük, hogy sikerült-e és ha igen, akkor állítsuk be a success ref értékét:
+`if (response.status == 201) success.value = response.data.message;`
+
+5. A catch blokk:
+- *(#7)*Ha hibára jutunk: Ellenőrizzük, hogy 422-es hibakódot (Unprocessable Content) kaptunk-e, azaz a user nem töltött ki valamit megfelelően, vagy például használatban van az email. Ez esetben, menjünk végig a hibákon, és rakjuk bele őket az errors ref-be. Ha a hibakód bármi más, pl.: 500 Internal Server Error írjunk ki egy általános hibaüzenetet.
+```
+if (error.response.status == 422) {
+  const errs = error.response.data.errors;
+  for (const key in errs) {
+    errors.value.push(errs[key][0]);
+  }
+} else {
+  errors.value.push("Ismeretlen hiba történt.");
+}
+```
+
+6. Finally block:
+- *Magyarázat:* A try-catch-nek van egy harmadik blokkja is, a finally, ami minden esetben lefut, amikor a try/catch a futásciklus végére ér.
+*(#8)*
+```
+finally {
+    loading.value = null;
+}
+```
+
+*Hiba esetén a struktúra magyarázata:*
+Ha postmanben megnézzük, akkor a válasz egy teljesen kitöltetlen POST request a /login endpointra így nézne ki:
+```
+{
+    "message": "The email has already been taken.",
+    "errors": {
+        "email": [
+            "The email has already been taken."
+        ]
+    }
+}
+```
+Ez magyarázza, hogy miért olyan for loopot használtam amilyet, és azt, hogy miért-mire hivatkoztam. De persze a legjobb módszer ezeket megérteni, egy egyszerű: `console.log(response)`
+
+Teljes formSubmitted metódus:
+```
+const formSubmitted = async () => {
+  errors.value = [];
+  success.value = null;
+
+  try {
+    loading.value = "Fiók létrehozása...";
+    const response = await axios.post("http://127.0.0.1:8000/api/register", formData.value);
+    if (response.status == 201) success.value = response.data.message;
+  } catch (error) {
+    if (error.response.status == 422) {
+      const errs = error.response.data.errors;
+      for (const key in errs) {
+        errors.value.push(errs[key][0]);
+      }
+    } else {
+      errors.value.push("Ismeretlen hiba történt.");
+    }
+  } finally {
+    loading.value = null;
+  }
+};
 ```
