@@ -103,3 +103,12 @@ Ha benne van a `EXCLUDE_NAV` konstansban a jelenlegi path, akkor nem mutatjuk. E
   <main>Login</main>
 </div>
 ```
+
+*404 not found:*
+Egy egyszerű path matching syntaxist kínál a Vue hasonló esetekre:
+`{ path: "/:pathMatch(.*)*", name: "NotFound", component: NotFoundView }`
+Nézzük mi történik. Vue-ban a ':' a path-ben paraméter megadására szolgál, a pathMatch pedig elkap minden olyan routet ami a zárójelben lévő regexnek stimmel. Jelen esetben ez '.*'. Ez egy speciális eset a Vue-ban, ami arra szolgál, hogy megtalálja azokat a route-okat, amik nem lettek megtalálva a többi definiált route által, és kidobja a NotFoundView-t.
+De ezt a syntaxist lehetne másra is használni, példa:
+Ha a regex ez lenne `/user/:id(\\d+)`, akkor:
+- Ha beírjuk, hogy `/user/1` => Mutatja a user adatait (vagy akármi)
+- Ha beírjuk, hogy `/user/foo` => 404 error
