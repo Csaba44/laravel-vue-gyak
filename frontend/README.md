@@ -112,3 +112,32 @@ De ezt a syntaxist lehetne másra is használni, példa:
 Ha a regex ez lenne `/user/:id(\\d+)`, akkor:
 - Ha beírjuk, hogy `/user/1` => Mutatja a user adatait (vagy akármi)
 - Ha beírjuk, hogy `/user/foo` => 404 error
+
+### Tailwind CSS
+A stílushoz [Tailwindet](https://tailwindcss.com/) fogok használni, ami megkönnyíti a szép UI felületek kialakítását. 
+
+Telepítés:
+```
+npm install -D tailwindcss@3 postcss autoprefixer
+npx tailwindcss init -p
+```
+
+tailwind.config.js-ben a contentet írjuk át:
+```
+content: ["./index.html", "./src/**/*.{vue,js,ts,jsx,tsx}"],
+```
+
+CSS-ben:
+```
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+main.js-ben legyen importálva a css:
+```
+import './index.css'
+```
+
+Teszt: `<h1 class="font-bold">asd</h1>`
+
