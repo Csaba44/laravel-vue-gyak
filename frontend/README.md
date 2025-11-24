@@ -11,7 +11,7 @@ A leírásban feltételnek tekintem a két videó ismeretét, és nem térek ki 
 A routinghoz a [Vue Routert](https://router.vuejs.org/) használtam, a dokumentációja elég érdekes, félig-meddig a régi API-ra épül, de használható. Találtam egy blog [bejegyzést arról](https://vueschool.io/articles/vuejs-tutorials/how-to-master-vue-router-in-vue-js-3-with-composition-api/) hogyan kellene használni jól a composition API-al.
 
 A lényeg, hogy készítünk az src/ mappába egy route.js file-t, ahol inicializáljuk a routert: 
-`
+```
 import { createRouter, createWebHistory } from "vue-router";
 
 import HomeView from "./views/HomeView.vue";
@@ -19,7 +19,7 @@ import HomeView from "./views/HomeView.vue";
 const routes = [ { path: "/", name: "home", component: HomeView }, { path: "/login", name: "login", component: import("./views/LoginView.vue") }, // Lazy loading ];
 
 const router = createRouter({ history: createWebHistory(import.meta.env.BASE_URL), routes: routes, }); export default router;
-`
+```
 
 
 Definiáljuk az elérési utakat, a nevet, és a komponenseket (view-kat) amiket adott route-hoz ki kell renderelni. A login route-ot lazy loadinggal oldottam meg, nem töltöm be addig, amég nem kattintott rá a user. Kattintáskor kezdi a betöltést, mivel nem kell a usernek minden alkalommal belépnie, ezért fölösleges betölteni. A HomeView-hoz nem használok lazy loadingot mivel itt csak hátülütője lenne, hiszen a home-ra lép fel a user elsőnek, tehát mindenképp be kell tölteni. A Lazy Loading nem összekeverendő az eager loadingal a laravelben, *teljesen más* a kettő.
@@ -31,7 +31,8 @@ Többféle módon lehet kezelni a böngészési előzményeket és az URL-eket, 
 - *Memory mode:* Egyáltalán nem interaktál a címsorral, és nem is böngészőre van kitalálva. Tehát, nem tudok direktbe a login page-re betölteni, hanem először meg kell nyomnom a navigációt. Ez jó lehet, például egy Electron appban (pl.: Discord). Itt sosem látjuk a címeket, fölösleges is bajlódni vele. Nekünk nem opció.
 
 
-Az App.vue-ba el kell helyezni egy `<main>` szekciót, ami a View-k megjelenítésére szolgál. `
+Az App.vue-ba el kell helyezni egy `<main>` szekciót, ami a View-k megjelenítésére szolgál. 
+```
 <template>
   <nav>
     <RouterLink to="/">Go to Home</RouterLink>
@@ -42,27 +43,27 @@ Az App.vue-ba el kell helyezni egy `<main>` szekciót, ami a View-k megjelenít�
     <RouterView />
   </main>
 </template>
-`
+```
 
 Illetve teszteléshez elhelyeztem két linket is, amivel váltogatni lehet. A `<nav>` mindig ottmarad felül, hiszen az oldalon csak a `<main>` szekció fog változni, mivel itt található a `<RouterView />`. A legkönnyebb így elképzelni: Amikor a user rákattint az oldalra, és belép a homepage-re a RouterView kicserélődik a HomeView-ra: 
-`
+```
 <main>
 <HomeView />
 </main>
-`
+```
 Ha a loginra kattintok, akkor kicserélődik a LoginView-ra:
-`
+```
 <main>
 <LoginView />
 </main>
-`
+```
 
 És így tovább. Valójában nem különbözik egy View egy hétköznapi komponenstől. Ez abból is látható, hogy mindösszesen ennyit írtam például a HomeView fileomba (amit konvenció szerint a /views mappában tárolok):
-`
+```
 <template>
   Home
 </template>
-`
+```
 
 *Navbar elrejtése*
 A navbar nem szeretném, ha látszódna amikor a login route-on van a user, a többin szeretném ha kirajzolódna. Azért érdemesebb így megoldani (hogy a App.vue-ban van a nav), mert csak egyszer kell kirajzolni, ahelyett, hogy az összes komponensbe egyesével beleraknám. 
@@ -73,7 +74,7 @@ Ezt így lehetne megoldani: v-if megnézi, hogy a route a "/login" vagy "/regist
 Kis utánanézés után, *megoldás:*
 A `$route.fullPath` globális változó megadja nekünk, hogy melyik routeon vagyunk. Login route esetében: `/login`. Innentől már egyszerű a dolgunk:
 
-`
+```
 <script setup>
 const EXCLUDE_NAV = ['/login', '/register'];
 </script>
@@ -88,11 +89,11 @@ const EXCLUDE_NAV = ['/login', '/register'];
     <RouterView />
   </main>
 </template>
-`
+```
 
 Ha benne van a `EXCLUDE_NAV` konstansban a jelenlegi path, akkor nem mutatjuk. Egyszerű, és gyors megoldás.
 *v-show:* Ugyan az mint a `v-if`, annyi különbséggel, hogy nem veszi ki teljes mértékben a navbart az oldalról, csak rárak egy `display: none`-t CSS-ben, amivel eléri ugyan ezt az eredményt, viszont nem kell újra betölteni, ha a user bejelentkezik és meg kell jeleníteni. Ilyenkor csak leveszi róla a Vue a CSS formázást, és megoldva. A bizonyíték a kirenderelt oldal forrásában is látható:
-`
+```
 <div id="app" data-v-app="">
   <nav style="display: none">
     <a href="/" class="">Go to Home</a>
@@ -101,4 +102,4 @@ Ha benne van a `EXCLUDE_NAV` konstansban a jelenlegi path, akkor nem mutatjuk. E
   </nav>
   <main>Login</main>
 </div>
-`
+```
