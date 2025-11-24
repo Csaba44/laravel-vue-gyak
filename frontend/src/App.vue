@@ -4,9 +4,10 @@ const EXCLUDE_NAV = ['login', 'register'];
 
 <template>
   <nav v-show="!EXCLUDE_NAV.includes($route.name)">
-    <RouterLink to="/">Go to Home</RouterLink>
+    <RouterLink to="/">Home</RouterLink>
     <br>
-    <RouterLink to="/login">Go to About</RouterLink>
+    <RouterLink to="/login">Login</RouterLink>
+    <RouterLink to="/register">Register</RouterLink>
   </nav>
   <main>
     <RouterView />

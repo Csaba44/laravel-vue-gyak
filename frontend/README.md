@@ -141,3 +141,68 @@ import './index.css'
 
 Teszt: `<h1 class="font-bold">asd</h1>`
 
+### RegisterView
+A RegisterView két máshol is felhasználható komponensből fog állni (? = not required):
+- Button (Props: type?) (Emits: click)
+- Input (Props: name, label, placeholder?, type?, class?) (Models: model) (Emits: Ø)
+
+**Button:**
+Ez a könnyebbik. Bekér egy prop-ot, ami a type (pl.: button vagy submit). Ezt nem kötelező megadni. A :type v-bind-al adjuk meg neki. A v-on segítségével a click eseményen emitelünk egy 'click' emitet. 
+
+*Slot:* Mint látható, propként nem kértük be a gomb feliratát. Ez a `<Button>` child elementje lesz, pl.:
+`<Button><span>EZ ITT!</span></Button>`. Ahova beírjuk a `<slot>` tag-et, ott fog megjelenni a child element.
+
+Elkészült kód:
+
+```
+<script setup>
+const emit = defineEmits(['click']);
+
+const props = defineProps({
+  type: {
+    type: String,
+    required: false,
+    default: 'button'
+  }
+});
+</script>
+
+<template>
+  <button :type="props.type" @click="emit('click')"><slot></slot></button>
+</template>
+
+// Felhasználása:
+<Button type="button" @click='getStartedClicked'>Get started</Button>
+```
+
+**Input:**
+Az input saját komponensekre van a Vue-nak egy nagyon jól működő struktúrája. Valójában csinálunk egy "saját v-model"-t.
+`const model = defineModel();`
+
+És a child komponensen belül így használjuk:
+`<input v-model="model" />`
+
+A parent komponensben pedig mintha egy sima egyszerű input lenne, a v-model attribútumot használjuk.
+
+`<Input name="fullname" label="Teljes név: " placeholder="Gipsz Jakab" v-model="formData.fullName" />`
+
+A többi magától értetődik.
+
+```
+<script setup>
+// Itt definiáljuk a saját modelünket.
+const model = defineModel();
+
+const props = defineProps(...);
+</script>
+
+<template>
+  <div :class="'flex items-center gap-3' + ' ' + props.class">
+    <label :for="props.name">{{ props.label }}</label>
+    <input v-model="model" :type="props.type" :name="props.name" :placeholder="props.placeholder" />
+  </div>
+</template>
+
+// Felhasználása:
+<Input name="password" type="password" label="Jelszó: " placeholder="***" v-model="formData.password" />
+```
