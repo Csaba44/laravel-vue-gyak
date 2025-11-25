@@ -238,7 +238,9 @@ return response()->json([
 
 
 ### Backend módosítások
-Hibásan, az api.php-ba került a kód. Most viszont megértettem, hogy ha API php-ba dolgozok, akkor nincsennek user sessionök, tehát nem tudok értelmes, cookie based authenticationt csinálni. Szóval módosításokat kellett végeznem, hogy ez működjön. Először is, minden api.php route átmegy a web.php-ba.
+Szóval itt van az a pont, ahol teljesen elvesztem. Szóval én egy REST API-t akartam csinálni, de aztán valahogy leterelődtem az útról és csináltam egy session based API-t ami stateful. Tehát teljesen mást, mint amit akartam. De ez nem azt jelenti, hogy összedől a világ, ugyanis SPA-khoz ez a legjobb megoldás valóban. Ha pl. az api viszont kiszolgál már egy C# Appot is, akkor REST api-t kell építeni, mert a C# nem egy böngésző, nem használ cookie-kat. Szóval jelenleg, az API-m egy cookie based authenticationt tartalmaz.
+
+Tehát így az api.php-ba írtam a kódot. Most viszont megértettem, hogy ha API php-ba dolgozok, akkor nincsennek user sessionök, tehát nem tudok értelmes, cookie based authenticationt csinálni. Szóval módosításokat kellett végeznem, hogy ez működjön. Először is, minden api.php route átmegy a web.php-ba.
 
 Összefoglalásképpen:
 - api.php => Akkor, ha mindnig a requestben egy headerben akarsz elküldeni Tokent. Nem a leg ideálisabb Single Page Appokhoz. Pl. ha C#-ba kellene, akkor jó lenne.
@@ -279,3 +281,38 @@ Emellett, a "localhost"-okat itt is cseréljük 127.0.0.1-re.
 
 **Az 5173-as a frontend oldal portja!!!**
 
+### Auth
+A register rendben van, viszont a loginon és a logouton változtatni kellett, hogy kezeljék a sessionöket és ne csak JSON-t adjanak vissza, hanem beállítsák a megfelelő cookie-kat.
+
+```
+public function login(Request $request)
+{
+  $loginUserData = $request->validate([
+      'email' => 'required|string|email',
+      'password' => 'required'
+  ]);
+
+  if (auth()->attempt($loginUserData)) {
+      return response()->json([
+          'message' => 'Login successful'
+      ]);
+  } else {
+      return response()->json([
+          'message' => 'Invalid credentials'
+      ], 401);
+  }
+}
+```
+
+```
+function logout(Request $request)
+{
+    auth()->guard('web')->logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return response()->json([
+        'message' => 'Logged out'
+    ]);
+}
+```
