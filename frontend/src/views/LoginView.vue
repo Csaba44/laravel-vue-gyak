@@ -8,12 +8,6 @@ import Loading from "../components/Loading.vue";
 import { useUserStore } from "../stores/user";
 import router from "../router";
 
-const userStore = useUserStore();
-
-onBeforeMount(async () => {
-  
-  await userStore.fetchUser();
-});
 
 const formData = ref({
   email: "teszt.elek@gmail.com",

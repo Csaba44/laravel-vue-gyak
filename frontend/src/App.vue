@@ -15,10 +15,8 @@ onBeforeMount(async () => {
 
 const logOut = async () => {
   try {
-    const res = await api.post("/logout");
-    if (res.status == 200) {
-      router.push("/login");
-    }
+    const success = await userStore.logout();
+    if (success) router.push("/login");
   } catch (error) {
     console.error(error);
   }

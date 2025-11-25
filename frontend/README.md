@@ -340,7 +340,7 @@ import axios from "axios";
 
 
 const api = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/",
+  baseURL: "http://127.0.0.1:8000/",
   timeout: 10000,
 });
 
@@ -351,3 +351,187 @@ A baseURL-be kerül az API url. A timeout arra való, hogy a ms-ben megadott id�
 
 Ezután így tudjuk felhasználni: `const response = await api.post("/register", formData.value)`.
 Fontos: Ne az axios-t importáljuk ahol API hívást szeretnénk végrehajtani, hanem a saját axios instance-ünket. És ne `axios.post`-al hívjuk, hanem `api.post`-al, vagy bárhogy is van elnevezve a saját axios instance.
+
+
+### Auth
+Mivel cookie based authentikációt csinálok, ezért be kell konfigurálni az axios instance-emet megfelelően:
+```
+const api = axios.create({
+  baseURL: "http://127.0.0.1:8000/",
+  timeout: 10000,
+  withCredentials: true,
+  withXSRFToken: true,
+  headers: {
+    Accept: "application/json",
+  },
+});
+```
+
+Amikor a user elküldi a login formot, több dolognak kell történnie:
+- Kell kérni egy CSRF-Tokent a szervertől
+- Elkell küldeni a bejelentkezési adatokat a szervernek, és megpróbálni bejelentkeztetni a usert
+- Ellenőrizni, sikerült e a bejelntkezés, ha igen, akkor redirectelni a usert, ha nem, akkor kiírni a hibát.
+
+Így a teljes metódusom a következő:
+```
+const formSubmitted = async () => {
+  errors.value = [];
+  success.value = null;
+
+  try {
+    loading.value = "Bejelentkezés folyamatban...";
+    const csrf = await api.get("/sanctum/csrf-cookie");
+    console.log("csrf", csrf);
+
+    const response = await api.post("/login", formData.value);
+    if (response.status == 200) {
+      success.value = response.data.message;
+      router.push("/");
+    };
+    console.log("login", response);
+  } catch (error) {
+    console.log(error);
+    const errs = error.response.data.errors;
+    if (error.response && error.response.status == 422) {
+      for (const key in errs) {
+        errors.value.push(errs[key][0]);
+      }
+    } else if (error.response && error.response.status == 401) {
+      errors.value.push(error.response.data.message);
+    } else {
+      errors.value.push("Ismeretlen hiba történt.");
+    }
+  } finally {
+    loading.value = null;
+  }
+};
+```
+
+*Pinia - Store*
+Frontenden léteznek úgynevezett Store-ok. Itt lehet tárolni az alkalmazás összes oldalán keresztül adatot. Tegyük fel, van egy számlálónk, amit az összes oldalon használunk Vue-ban. Akkor definiálhatunk egy CounterStore-t, ami arra fog szolgálni, hogy tárolja ezt az adatot. Inicializáljuk a counter-t, pl. 0-ra és készítünk egy increment metódust.
+Ha A oldalon hívjuk az incrementet, akkor a counter 1 lesz.
+Átmegyünk a B oldalra, akkor továbbra is 1 marad a counterünk, mert a store megtartotta az értéket.
+Ez mind teljesítmény miatt jó az authentikációhoz, mind fejlesztő szempontból kényelmes is.
+
+Létrehozzuk tehát az src/stores mappát, ahol ezek a store-ok fognak létezni.
+A user storenak 3 dolgot kell tudnia:
+- Megmondani, hogy: betöltött-e már a user adata; be van-e jelentkezve a user; ha igen, mik az adatai?
+- Ellenőrizni, hogy a user be van e jelentkezve
+- Kijelentkeztetni egy usert
+
+user.js:
+```
+import { defineStore } from "pinia";
+import api from "../../api";
+
+export const useUserStore = defineStore("user", {
+  state: () => ({
+    user: null,
+    isAuthenticated: false,
+    isUserLoaded: false,
+  }),
+  actions: {
+    async fetchUser() {
+      try {
+        const response = await api.get("/user");
+        this.user = response.data;
+        this.isAuthenticated = true;
+      } catch (error) {
+        this.user = null;
+        this.isAuthenticated = false;
+        if (error.response && error.response.status !== 401) {
+          console.error("Error while authenticating user", error);
+        }
+      } finally {
+        this.isUserLoaded = true;
+      }
+    },
+    async logout() {
+      try {
+        const res = await api.post("/logout");
+        if (res.status == 200) {
+          this.user = null;
+          this.isAuthenticated = false;
+        }
+      } catch (error) {
+        console.error("Error while logging out", error);
+      } finally {
+        return !this.isAuthenticated;
+      }
+    },
+  },
+});
+```
+
+Fontos tudni, hogy a beálított cookie-k elküldődnek a kéréssel automatikusan. Tehát, ha be vagyunk jelentkezve, és teszünk egy kérést a /users-re akkor vagy visszakapjunk a saját adatainkat, vagy 401-et kapunk. Ha 401 akkor nem vagyunk bejelentkezve. Ha nem store-al csinálnánk, akkor minden egyes oldalon futtatnunk kéne ezt a fetchUser metódust. Vagy a másik megoldás, hogy folyamatosan props használatával adjuk lefelé mindig az értékeket, de ez egy nagyon csúnya megoldás.
+
+Emellett a logout küld egy kérést a /logout-ra ami invalidálja a sessiont, és a metódus visszaadja, hogy sikeres-e a kijelentkezés, azáltal, hogy a isAuthenticated ellentétét adja vissza. Ha isAuthenticated == false, akkor sikerült a kijelentkezés azaz 200as kóddal tért vissza a kérés.
+
+### Router
+A routerben is kellett változtatásokat végezni. 
+Elsősorban definiáltam egy protected route-ot, így:
+```
+{ path: "/my-orders", meta: { requiresAuth: true }, name: "myOrders", component: MyOrdersView },
+```
+
+Ezután használtam a router-nek a beforeEach metódusát, ami a következőt teszi: Amikor a router navigációt végez, előtte meghívódik ez a metódus, 3 paraméterrel: from, to, next. A from az, hogy honnan indult a navigáció, a to, az hogy hova. A next az pedig egy metódus, ha meghívjuk, akkor továbbmegy a router arra az oldalra, amelyikre kérte a user, vagy a redirect. Ha viszont paraméterrel hívjuk, pl `next("/login")`, akkor erre az oldalra fog továbbmenni.
+Olyan majdnem, mint egy middleware.
+
+4 feladata lesz:
+1. Ha a user nincs még betöltve, töltsük be.
+2. Ha protected a route, ellenőrizzük, hogy be van-e jelentkezve a user, és ha nem, dobjuk át loginra.
+3. Ha a loginról lett redirectelve a user, próbáljuk meg bejelentkeztetni.
+4. Ha a loginra vagy a registerre próbál navigálni, és be van jelentkezve, akkor ne hagyjuk.
+
+Minden egyéb esetben engedjük tovább a kérést.
+
+```
+router.beforeEach(async (to, from, next) => {
+  // Inicializáljuk a userStore-t hogy tudjuk használni
+  const userStore = useUserStore();
+
+  // 1.
+  if (!userStore.isUserLoaded) {
+    await userStore.fetchUser();
+  }
+
+  // 2.
+  if (to.meta.requiresAuth) {
+    await userStore.fetchUser();
+    if (!userStore.isAuthenticated) return next("/login");
+  }
+
+  // 3.
+  if (from.name === "login") {
+    try {
+      await userStore.fetchUser(); 
+    } catch (err) {
+      console.error("Failed to fetch user:", err);
+      return next("/login");
+    }
+  }
+
+  // 4.
+  if ((to.name == "login" || to.name == "register") && userStore.isAuthenticated) {
+    return next(from);
+  }
+
+  // Ha nem volt semmi gond, akkor mehet tovább.
+  next();
+});
+```
+
+Ezzel a setuppal, ha el akarjuk érni a user adatait, könnyen megtehetjük, például én így használom a Home oldalamon:
+```
+<script setup>
+import { useUserStore } from "../stores/user";
+
+const userStore = useUserStore();
+
+
+</script>
+
+<template>
+  <h1>Hi, {{ userStore.user?.name || "Guest" }}</h1>
+</template>
+```
