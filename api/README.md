@@ -235,3 +235,47 @@ return response()->json([
     'order' => $order->load('products'),
 ]);
 ```
+
+
+### Backend módosítások
+Hibásan, az api.php-ba került a kód. Most viszont megértettem, hogy ha API php-ba dolgozok, akkor nincsennek user sessionök, tehát nem tudok értelmes, cookie based authenticationt csinálni. Szóval módosításokat kellett végeznem, hogy ez működjön. Először is, minden api.php route átmegy a web.php-ba.
+
+Összefoglalásképpen:
+- api.php => Akkor, ha mindnig a requestben egy headerben akarsz elküldeni Tokent. Nem a leg ideálisabb Single Page Appokhoz. Pl. ha C#-ba kellene, akkor jó lenne.
+- web.php => Vannak session-ök, ideális SPA-khoz. Ha axiost frontenden bekonfiguráljuk, hogy küldje a CSRF tokent is meg a laravel-sessiont akkor működik az authentikáció.
+
+Hogy az CSRF tokennel és a CORS policyvel ne legyen gond, a biztonság kedvéért minden "localhost"-ot átírok 127.0.0.1-re mind backenden és frontenden. Egyszerű megoldás shift+ctrl+f "localhost" és mindegyiket kicserélem.
+
+Illetve a Vue appot is 127.0.0.1-en kell futtatni, erről a frontend oldalon, később.
+
+### Cors
+A CORS policyt be kell konfigurálni, erre létrehoztam a config/cors.php-t.
+```
+<?php
+
+return [
+    'supports_credentials' => true, // Engedélyezi a cookie authentikációt, header-öket
+    'allowed_origins' => ['http://127.0.0.1:5173'], // Engedélyezi a kéréseket ezekről a site-okról
+    'allowed_headers' => ['*'], // Engedélyezi ezeket a headereket
+    'allowed_methods' => ['*'], // GET, POST, stb.
+    'paths' => ['*'], // Engedélyezett route-ok (pl. /login, stb.)
+];
+```
+
+A "*" jelentése természetesen itt is az, hogy minden engedélyezett.
+
+Emiatt a változtatás miatt viszont a POSTMAN-es tesztelés is teljesen megváltozik.
+
+Mivel CSRF tokent is kell küldenünk a kéréssel, érdemes létrehozni egy collectiont postmanben és írni rá egy scriptet ami automatizálja ezt.
+Erről videó [itt található - 6:15-ig lényeges többi nem](https://youtu.be/My61OicxPRo)
+
+### .ENV
+A .envben is engedélyezni kell a frontendünket, és a cookie authentikációt
+```
+SANCTUM_STATEFUL_DOMAINS=127.0.0.1:5173,127.0.0.1
+SESSION_DRIVER=cookie
+```
+Emellett, a "localhost"-okat itt is cseréljük 127.0.0.1-re.
+
+**Az 5173-as a frontend oldal portja!!!**
+

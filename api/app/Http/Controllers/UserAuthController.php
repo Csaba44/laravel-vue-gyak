@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use GuzzleHttp\Psr7\Response as Psr7Response;
+use Illuminate\Auth\Access\Response as AccessResponse;
 use Illuminate\Cache\Repository;
+use Illuminate\Http\Client\Response as ClientResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpFoundation\Response;
 
 class UserAuthController extends Controller
 {
@@ -35,29 +39,25 @@ class UserAuthController extends Controller
             'password' => 'required'
         ]);
 
-        $user = User::where('email', $loginUserData['email'])->first();
-
-        if (!$user || !Hash::check($loginUserData['password'], $user->password)) {
+        if (auth()->attempt($loginUserData)) {
+            return response()->json([
+                'message' => 'Login successful'
+            ]);
+        } else {
             return response()->json([
                 'message' => 'Invalid credentials'
             ], 401);
         }
-
-        $token = $user->createToken($user->name . '-AuthToken')->plainTextToken;
-
-        return response()->json([
-            'access_token' => $token,
-        ]);
     }
 
-    function logout()
+    function logout(Request $request)
     {
-        $user = auth('sanctum')->user();
-        
-        $user->tokens()->delete();
+        auth()->guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json([
-            'message' => 'logged out'
+            'message' => 'Logged out'
         ]);
     }
 }
