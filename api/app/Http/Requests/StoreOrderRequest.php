@@ -30,7 +30,7 @@ class StoreOrderRequest extends FormRequest
             'postal_code' => 'required|string|regex:/^\d{4}$/',
             'address' => 'required',
             'products' => 'required|array|min:1',
-            'status' => [Rule::in(['Megrendelve', 'Előkészítés alatt', 'Átadva a futárnak'])],
+            'status' => [Rule::in(['Megrendelve', 'Előkészítés alatt', 'Átadva a futárnak', 'Kiszállítva'])],
         ];
     }
 }

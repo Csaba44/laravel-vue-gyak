@@ -10,6 +10,7 @@ const RegisterView = () => import("./views/RegisterView.vue");
 const NotFoundView = () => import("./views/NotFoundView.vue");
 const MyOrdersView = () => import("./views/MyOrdersView.vue");
 const BasketView = () => import("./views/BasketView.vue");
+const OrderView = () => import("./views/OrderView.vue");
 
 const routes = [
   { path: "/", name: "home", component: HomeView },
@@ -17,6 +18,7 @@ const routes = [
   { path: "/login", name: "login", component: LoginView },
   { path: "/:pathMatch(.*)*", name: "NotFound", component: NotFoundView }, // 404 not found https://router.vuejs.org/guide/essentials/dynamic-matching.html#Catch-all-404-Not-found-Route
   { path: "/my-orders", meta: { requiresAuth: true }, name: "myOrders", component: MyOrdersView },
+  { path: "/order/:id", meta: { requiresAuth: true }, name: "order", component: OrderView },
   { path: "/basket", name: "basket", component: BasketView },
 ];
 
@@ -38,7 +40,7 @@ router.beforeEach(async (to, from, next) => {
 
   if (from.name === "login") {
     try {
-      await userStore.fetchUser(); 
+      await userStore.fetchUser();
     } catch (err) {
       console.error("Failed to fetch user:", err);
       return next("/login");

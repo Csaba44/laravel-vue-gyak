@@ -25,7 +25,7 @@ class UpdateOrderRequest extends FormRequest
         return [
             'postal_code' => 'sometimes|required|string',
             'address' => 'sometimes|required|string',
-            'status' => ['sometimes', Rule::in(['Megrendelve', 'Előkészítés alatt', 'Átadva a futárnak'])],
+            'status' => ['sometimes', Rule::in(['Megrendelve', 'Előkészítés alatt', 'Átadva a futárnak', 'Kiszállítva'])],
             
             
             'products' => 'sometimes|required|array|min:1',

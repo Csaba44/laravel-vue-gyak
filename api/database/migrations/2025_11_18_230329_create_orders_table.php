@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained();
             $table->string('postal_code');
             $table->string('address');
-            $table->enum('status', ['Megrendelve', 'Előkészítés alatt', 'Átadva a futárnak'])->default('Megrendelve');
+            $table->enum('status', ['Megrendelve', 'Előkészítés alatt', 'Átadva a futárnak', 'Kiszállítva'])->default('Megrendelve');
             $table->timestamps();
         });
     }

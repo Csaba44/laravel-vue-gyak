@@ -919,3 +919,16 @@ const currStage = ref("ModifyBasket");
 </template>
 ```
 
+### Rendeléseim, rendelés megtekintése
+MyOrdersView-ban lekérem a user rendeléseit beforeMount eventen.
+
+Majd bekonfiguráltam a Vue Router-t hogy legyen egy /order oldal, ami fogad paramétrezést: /order/:id
+`{ path: "/order/:id", meta: { requiresAuth: true }, name: "order", component: OrderView }`
+Ezután a OrderView-n így érjük el a paramétert:
+
+```
+const route = useRoute();
+const currentOrderId = route.params.id;
+```
+
+Minden egyéb a megszokott módon történik.

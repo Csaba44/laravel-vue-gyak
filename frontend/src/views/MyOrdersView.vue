@@ -1,26 +1,24 @@
 <script setup>
-import { onBeforeMount, ref } from 'vue';
-import { useUserStore } from '../stores/user';
-import api from '../../api';
-const userStore = useUserStore();
+import { onBeforeMount, ref } from "vue";
+import api from "../../api";
+import Order from "../components/Order.vue";
 
 const orders = ref([]);
 
 onBeforeMount(async () => {
   try {
     const response = await api.get("/orders");
-    console.log(response);
-    orders.value = response.data
+    console.log(response.data);
+    orders.value = response.data;
   } catch (error) {
     console.error(error);
   }
 });
-
-
 </script>
 
 <template>
-  <div class="mt-10 border-1">
-    <p v-for="order in orders" :key="order.id">{{ order.address }} - {{ order.status }}</p>
+  <div class="p-5 flex flex-col gap-3">
+    <h1 class="text-2xl">Rendeléseim</h1>
+    <Order v-for="order in orders" :key="order.id" :order="order" />
   </div>
 </template>
