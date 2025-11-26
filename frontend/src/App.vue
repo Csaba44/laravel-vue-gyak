@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeMount, watch } from "vue";
+import { onBeforeMount, ref, watch } from "vue";
 import { useUserStore } from "./stores/user";
 import Button from "./components/Button.vue";
 import api from "../api";
@@ -8,10 +8,12 @@ const EXCLUDE_NAV = ["login", "register"];
 
 const userStore = useUserStore();
 
+const userData = ref(null);
+
 onBeforeMount(async () => {
   await userStore.fetchUser();
+  if (userStore.isAuthenticated) userData.value = userStore.user;
 });
-
 
 const logOut = async () => {
   try {
@@ -21,17 +23,34 @@ const logOut = async () => {
     console.error(error);
   }
 };
+
+
+watch(
+  () => userStore.userData,
+  () => {
+    if (userStore.isAuthenticated) userData.value = userStore.user;
+  },
+  {deep: true}
+);
 </script>
 
 <template>
-  <nav v-show="!EXCLUDE_NAV.includes($route.name)">
-    <RouterLink to="/">Home</RouterLink>
-    <RouterLink to="/my-orders">My orders</RouterLink>
-    <br />
-    <RouterLink to="/login">Login</RouterLink>
-    <RouterLink to="/register">Register</RouterLink>
-    <Button @click="logOut" class="ml-5">Log out</Button>
+  <nav v-show="!EXCLUDE_NAV.includes($route.name)" class="bg-slate-300 grid gap-10 items-center grid-cols-2 w-full py-2">
+    <div class="flex">
+      <RouterLink class="text-nowrap mr-4" to="/">Home</RouterLink>
+      <RouterLink class="text-nowrap mr-4" to="/my-orders">My orders</RouterLink>
+      <template v-if="userData === null">
+        <RouterLink class="text-nowrap mr-4 font-medium" to="/login">Login</RouterLink>
+        <RouterLink class="text-nowrap mr-4 font-medium" to="/register">Register</RouterLink>
+      </template>
+    </div>
+
+    <div class="flex justify-end items-center gap-5">
+      <p>Szia, {{ userData?.name ?? "?"}}</p>
+      <Button v-if="userData !== null" @click="logOut" class="mr-4"> Log out </Button>
+    </div>
   </nav>
+
   <main>
     <RouterView />
   </main>

@@ -16,5 +16,7 @@ const props = defineProps({
 </script>
 
 <template>
-  <button :disabled="props.disabled" :type="props.type" class="bg-sky-500 w-min text-nowrap py-2 px-4 rounded-lg hover:bg-sky-600 font-medium" @click="emit('click')"><slot></slot></button>
+  <button :disabled="props.disabled" :type="props.type" class="w-min text-nowrap py-2 px-4 rounded-lg font-medium bg-sky-500 hover:bg-sky-600 disabled:bg-gray-400 disabled:cursor-not-allowed" @click="emit('click')">
+    <slot></slot>
+  </button>
 </template>
