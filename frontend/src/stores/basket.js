@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { useProductStore } from "./product";
 
 export const useBasketStore = defineStore("basket", {
   state: () => ({
@@ -14,15 +15,19 @@ export const useBasketStore = defineStore("basket", {
         }
       });
 
-      if (index !== -1) {
-        this.products[index].count++;
-      } else {
-        const newBasketItem = { id, count };
+      const productStore = useProductStore();
+      const maxCount = productStore.getMaxProductCount(id);
+      if (maxCount < 0) return; // -1 ha a products null, -2 ha nincs olyan product
 
-        this.products.push(newBasketItem);
+      if (index !== -1) {
+        if (this.products[index].count < maxCount) this.products[index].count++;
+        else return false;
+      } else {
+        if (maxCount >= 1) this.products.push({ id, count });
+        else return false;
       }
 
-      console.log(this.products);
+      return true;
     },
     getCount(id) {
       const product = this.products.find((p) => p.id == id);
@@ -30,6 +35,6 @@ export const useBasketStore = defineStore("basket", {
       if (!product) return -1;
 
       return product.count;
-    }
+    },
   },
 });

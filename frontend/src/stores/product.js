@@ -19,5 +19,12 @@ export const useProductStore = defineStore("product", {
         this.isLoaded = true;
       }
     },
+    getMaxProductCount(productId) {
+      if (this.products == null) return -1;
+      const product = this.products.filter((p) => p.id == productId)[0];
+      if (!product) return -2;
+
+      return product.stock_count;
+    },
   },
 });

@@ -1,7 +1,7 @@
 <script setup>
 import Button from "./Button.vue";
 import { useBasketStore } from "../stores/basket";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 
 const props = defineProps({
   product: {
@@ -11,6 +11,7 @@ const props = defineProps({
 });
 
 const basketStore = useBasketStore();
+const limitReached = ref(false);
 
 const SOLD_OUT_COLOR = "text-red-500";
 const FEW_LEFT_COLOR = "text-amber-500";
@@ -27,6 +28,11 @@ const basketProductCount = computed(() => {
   if (c == -1) return 0;
   return c;
 });
+
+const addProduct = () => {
+  const addResult = basketStore.addProduct(props.product.id, 1);
+  if (!addResult) limitReached.value = true;
+};
 </script>
 
 <template>
@@ -35,7 +41,7 @@ const basketProductCount = computed(() => {
     <p class="font-bold">{{ product.price }} Ft</p>
     <p :class="'font-medium' + ' ' + stockColor">{{ stockText }}</p>
     <div class="w-full flex justify-center mt-5">
-      <Button :disabled="props.product.stock_count <= 0" @click="basketStore.addProduct(props.product.id, 1)">Kosárhoz ({{ basketProductCount }})</Button>
+      <Button :disabled="props.product.stock_count <= 0" @click="addProduct()">{{limitReached ? "Elérte a maximumot" : "Kosárhoz"}} ({{ basketProductCount }})</Button>
     </div>
   </div>
 </template>
