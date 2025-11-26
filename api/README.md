@@ -316,3 +316,62 @@ function logout(Request $request)
     ]);
 }
 ```
+
+### Refactoring
+Találtam kettő hibát, amit most javítottam. 
+
+Az első, hogy az order-eket le tudta kérni minden bejelentkezett felhasználó, de nem csak a sajátjait kapta vissza. A show metódusban ugyanez a logika volt. Ezt egy where query használatával tettem biztonságossá.
+
+A másik probléma, hogy amikor új order-t rögzítünk, eddig a requestben kértem be a user_id-t, de valójában a request user() paramétere is megadja.
+
+Így a módosított controller (releváns része):
+```
+public function index(Request $request)
+{
+$userId = $request->user()->id;
+
+$orders = Order::with(['user', 'products'])
+    ->where('user_id', $userId)
+    ->get();
+
+return response()->json($orders);
+}
+
+public function store(StoreOrderRequest $request)
+{
+$data = [
+    'user_id' => $request->user()->id,
+    'postal_code' => $request->postal_code,
+    'address' => $request->address,
+];
+
+// Only add 'status' field if it is in the request, else use default from migration
+if ($request->filled('status')) {
+    $data['status'] = $request->status;
+}
+
+$order = Order::create($data);
+
+foreach ($request->products as $key => $item) {
+    $order->products()->attach($item['product_id'], ['count' => $item['count']]);
+}
+
+return response()->json(["message" => 'Order created', "order" => $order->load('products')], 201);
+}
+
+public function show(Request $request, string $id)
+{
+$userId = $request->user()->id;
+
+$order = Order::with(['user', 'products'])
+    ->where('id', $id)
+    ->where('user_id', $userId)
+    ->first();
+
+if (!$order) {
+    return response()->json(['message' => 'Order not found or unauthorized'], 404);
+}
+
+return response()->json($order);
+}
+```

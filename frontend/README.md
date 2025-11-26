@@ -656,3 +656,266 @@ const addProduct = () => {
 ```
 
 Későbbi bővítés: localStorage-ba menteni a kosár adatait.
+
+
+### Rendelés leadása
+A rendelés leadásához létrehoztam a BasketView-t.
+Ezt stage-ekre bontottam:
+- ModifyBasket: Lehet módosítani a kosáron, átírni darabszámokat, törölni.
+- ConfirmOrder: User megadja az adatait, és leadja a rendelést
+- OrderSuccess: Kiírja a sikeres rendelés üzenetet.
+
+#### Store módosítások
+Ehhez a következő módosításokat kellett végeznem a store-okban:
+
+**BasketStore**
+Három metódussal bővült:
+- getBasketItemCountSum(): Visszaadja a kosárban hány termék van összesen.
+- setItemCount(productId, newCount): Beállítja a termék vásárolni kívánt darabszámát, 0 megadása esetén törli.
+- getBasketValue(): Visszaadja a teljes értékét a kosárnak forintban. 
+
+```
+getBasketItemCountSum() {
+let sum = 0;
+
+this.products.forEach((product) => {
+  sum += product.count;
+});
+
+return sum;
+},
+setItemCount(productId, newCount) {
+if (newCount < 0) return;
+
+var index = -1;
+this.products.find(function (item, i) {
+  if (item.product_id === productId) {
+    index = i;
+    return i;
+  }
+});
+
+if (index === -1) return;
+
+if (newCount > 0) {
+  this.products[index].count = newCount;
+} else {
+  // Törlés
+  this.products.splice(index, 1);
+}
+},
+getBasketValue() {
+const productStore = useProductStore();
+
+let sum = 0;
+this.products.forEach(basketProduct => {
+  const details = productStore.getProductDetails(basketProduct.product_id);
+  sum += details.price * basketProduct.count;
+});
+
+return sum;
+}
+```
+
+**ProductStore**
+Egy metódussal bővítettem:
+- getProductDetails(productId): Visszaadja a termék minden adatát ID alapján.
+```
+getProductDetails(productId) {
+  if (this.products == null) return -1;
+  const product = this.products.filter((p) => p.id == productId)[0];
+  return product;
+}
+```
+
+
+#### ModifyBasket stage
+Létrehoztam neki a megeflelő komponenst, aminek child componentje a BasketItem.
+
+Kezdjük előbb az utóbbival:
+Egy basket item megkapja prop-ként a productId-t és a countot (hány darabot rendelne).
+
+Szükség lessz mind a productStore-ra és a BasketStore-ra.
+
+A productDetails változóm egy computed érték, amit a productStore-ból nyerek ki. Itt tárolom az adott termék adatait, ami az ár kiszámításához szükséges lesz.
+
+Illetve egy maxCount változóm, ami tárolja, hogy maximum hányat rendelhetek az adott termékből.
+
+Felállítottam egy formot, ami írja, hogy jelenleg hány darab van adott termékből kosárban, és ezt lehet módosítani a form kitöltésével. Ilyenkor a basketStore setItemCount metódusát hívom, csak akkor, ha a beállított darabszám kevesebb, mint a maximum. 
+
+```
+<script setup>
+import { computed, ref } from "vue";
+import { useProductStore } from "../stores/product";
+import Input from "./Input.vue";
+import { useBasketStore } from "../stores/basket";
+
+const props = defineProps({
+  productId: {
+    type: Number,
+    required: true,
+  },
+  count: {
+    type: Number,
+    required: true,
+  },
+});
+
+const productStore = useProductStore();
+const basketStore = useBasketStore();
+
+const productDetails = computed(() => productStore.getProductDetails(props.productId));
+const maxCount = productStore.getMaxProductCount(productDetails.value.id);
+
+const count = ref(props.count);
+</script>
+
+<template>
+  <div class="bg-slate-100 grid grid-cols-2 rounded-md p-2 items-center">
+    <h2 class="text-lg">{{ productDetails.name }}</h2>
+    <form @submit.prevent="count <= maxCount && basketStore.setItemCount(props.productId, count)" class="w-full flex justify-end items-center gap-2">
+      <p>{{ productDetails.price * count }} Ft</p>
+      <span> - </span>
+      <Input min="0" :max="maxCount" type="number" v-model="count" name="product_count"></Input><span>db</span>
+    </form>
+  </div>
+</template>
+```
+
+**ModifyBasket component**
+Így a ModifyBasket komponens arra hivatott, hogy kiírja a BasketItem-eket egy v-for segítségével, majd lekezelje a user kattintását a "Következő" feliratú gombra: emitelni kell a "next-stage"-et.
+
+```
+<script setup>
+import { computed } from "vue";
+import { useBasketStore } from "../stores/basket";
+import BasketItem from "./BasketItem.vue";
+import Button from "./Button.vue";
+import { useUserStore } from "../stores/user";
+import router from "../router";
+
+const basketStore = useBasketStore();
+
+const emit = defineEmits(["next-stage"]);
+
+const userStore = useUserStore();
+</script>
+
+<template>
+  <div>
+    <div v-if="basketStore.products.length > 0" class="flex flex-col gap-3 mt-4">
+      <BasketItem v-for="product in basketStore.products" :key="product.product_id" :product-id="product.product_id" :count="product.count" />
+
+      <div class="mt-2">
+        <h1 class="text-xl">Összesen</h1>
+        <p class="text-lg font-bold">{{ basketStore.getBasketValue() }} Ft</p>
+      </div>
+
+      <Button @click="userStore.isAuthenticated ? emit('next-stage') : router.push('/login')">Következő</Button>
+    </div>
+    <div v-else>
+      <p>A kosár üres.</p>
+    </div>
+
+    
+  </div>
+</template>
+```
+
+#### ConfirmOrderDetails stage
+Ebben a stádiumban tudja a user beírni az adatait, jelenleg a szimplicitás érdekében csak egy Irányítószám és Cím megadása szükséges. 
+
+A rendelés leadása gombra kattintva a frontend meghívja az API-t a /orders route-on, és amennyiben minden rendben ment, azaz status = 201 akkor emiteli a "next-stage"-et.
+
+A hibakezelés át lett emelve a Login felületről, a logika megegyezik.
+
+```
+<script setup>
+import Input from "./Input.vue";
+import Button from "./Button.vue";
+import api from "../../api";
+import { useBasketStore } from "../stores/basket";
+import { ref } from "vue";
+import Loading from "./Loading.vue";
+import Alert from "./Alert.vue";
+
+const emit = defineEmits(["next-stage"]);
+const basketStore = useBasketStore();
+
+const formData = ref({ postalCode: null, address: "" });
+
+const loading = ref(null);
+
+const errors = ref([]);
+
+const finishOrder = async () => {
+  errors.value = [];
+  if (formData.value.postalCode == null || formData.value.address.trim() == "") return errors.value.push("Kérlek tölts ki minden mezőt.");
+  try {
+    loading.value = "Rendelés leadása";
+    const result = await api.post("/orders", {
+      postal_code: formData.value.postalCode.toString(),
+      address: formData.value.address,
+      products: basketStore.products,
+    });
+    console.log(result);
+
+    if (result.status === 201) {
+      emit("next-stage");
+      return;
+    } else {
+      errors.value.push("Ismeretlen hiba történt.");
+      return;
+    }
+  } catch (error) {
+    if (!error.response) {
+      errors.push("Ismeretlen hiba történt. Ellenőrizze az internetkapcsolatát.");
+    } else if (error.response.status === 422) {
+      const apiErrors = error.response.data.errors;
+      for (const key in apiErrors) {
+        errors.value.push(apiErrors[key][0]);
+      }
+    }
+  } finally {
+    loading.value = null;
+  }
+};
+</script>
+
+<template>
+  <div class="w-full mt-10 flex justify-center items-center">
+    <Loading v-if="loading">{{ loading }}</Loading>
+    <form class="flex flex-col gap-5">
+      <Alert type="error" v-for="error in errors" :key="error">{{ error }}</Alert>
+      <Input name="postalCode" v-model="formData.postalCode" placeholder="1234" label="Irányítószám" type="number" />
+      <Input name="address" v-model="formData.address" placeholder="Kossuth u. 1." label="Cím" />
+
+      <Button @click="finishOrder()">Rendelés leadása</Button>
+    </form>
+  </div>
+</template>
+```
+
+#### BasketView
+A BasketView component pedig ezt a 3 állapotot koordinálja, hogy minden a megfelelő időben jelenjen meg. 
+
+```
+<script setup>
+import { ref } from "vue";
+import ModifyBasket from "../components/ModifyBasket.vue";
+import ConfirmOrderDetails from "../components/ConfirmOrderDetails.vue";
+
+const currStage = ref("ModifyBasket");
+</script>
+
+<template>
+  <div class="p-5">
+    <h1 class="text-2xl font-medium">Vásárlás végelegesítése</h1>
+
+    <ModifyBasket v-if="currStage === 'ModifyBasket'" @next-stage="currStage = 'ConfirmOrderDetails'" />
+    <ConfirmOrderDetails v-else-if="currStage === 'ConfirmOrderDetails'" @next-stage="currStage = 'OrderSuccess'" />
+    <h1 v-if="currStage === 'OrderSuccess'" class="text-2xl font-bold w-full text-center">Köszönjük! Sikeres rendelés.</h1>
+</div>
+</template>
+```
+

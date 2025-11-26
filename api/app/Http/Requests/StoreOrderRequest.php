@@ -27,7 +27,6 @@ class StoreOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => 'required|integer',
             'postal_code' => 'required|string|regex:/^\d{4}$/',
             'address' => 'required',
             'products' => 'required|array|min:1',

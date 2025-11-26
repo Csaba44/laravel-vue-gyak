@@ -36,5 +36,45 @@ export const useBasketStore = defineStore("basket", {
 
       return product.count;
     },
+    getBasketItemCountSum() {
+      let sum = 0;
+
+      this.products.forEach((product) => {
+        sum += product.count;
+      });
+
+      return sum;
+    },
+    setItemCount(productId, newCount) {
+      if (newCount < 0) return;
+
+      var index = -1;
+      this.products.find(function (item, i) {
+        if (item.product_id === productId) {
+          index = i;
+          return i;
+        }
+      });
+
+      if (index === -1) return;
+
+      if (newCount > 0) {
+        this.products[index].count = newCount;
+      } else {
+        // Törlés
+        this.products.splice(index, 1);
+      }
+    },
+    getBasketValue() {
+      const productStore = useProductStore();
+
+      let sum = 0;
+      this.products.forEach(basketProduct => {
+        const details = productStore.getProductDetails(basketProduct.product_id);
+        sum += details.price * basketProduct.count;
+      });
+
+      return sum;
+    },
   },
 });

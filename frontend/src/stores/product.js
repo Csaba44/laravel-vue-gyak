@@ -26,5 +26,10 @@ export const useProductStore = defineStore("product", {
 
       return product.stock_count;
     },
+    getProductDetails(productId) {
+      if (this.products == null) return -1;
+      const product = this.products.filter((p) => p.id == productId)[0];
+      return product;
+    },
   },
 });

@@ -9,6 +9,7 @@ const LoginView = () => import("./views/LoginView.vue");
 const RegisterView = () => import("./views/RegisterView.vue");
 const NotFoundView = () => import("./views/NotFoundView.vue");
 const MyOrdersView = () => import("./views/MyOrdersView.vue");
+const BasketView = () => import("./views/BasketView.vue");
 
 const routes = [
   { path: "/", name: "home", component: HomeView },
@@ -16,6 +17,7 @@ const routes = [
   { path: "/login", name: "login", component: LoginView },
   { path: "/:pathMatch(.*)*", name: "NotFound", component: NotFoundView }, // 404 not found https://router.vuejs.org/guide/essentials/dynamic-matching.html#Catch-all-404-Not-found-Route
   { path: "/my-orders", meta: { requiresAuth: true }, name: "myOrders", component: MyOrdersView },
+  { path: "/basket", name: "basket", component: BasketView },
 ];
 
 const router = createRouter({

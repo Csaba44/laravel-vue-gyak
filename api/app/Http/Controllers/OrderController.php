@@ -12,21 +12,23 @@ class OrderController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //$orders = Order::all();
-        $orders = Order::with(['user', 'products'])->get();
+        $userId = $request->user()->id;
+
+        $orders = Order::with(['user', 'products'])
+            ->where('user_id', $userId)
+            ->get();
 
         return response()->json($orders);
     }
-
     /**
      * Store a newly created resource in storage.
      */
     public function store(StoreOrderRequest $request)
     {
         $data = [
-            'user_id' => $request->user_id,
+            'user_id' => $request->user()->id,
             'postal_code' => $request->postal_code,
             'address' => $request->address,
         ];
@@ -48,10 +50,19 @@ class OrderController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
-        //$order = Order::find($id);
-        $order = Order::with(['user', 'products'])->find($id); // Eager loading
+        $userId = $request->user()->id;
+
+        $order = Order::with(['user', 'products'])
+            ->where('id', $id)
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$order) {
+            return response()->json(['message' => 'Order not found or unauthorized'], 404);
+        }
+
         return response()->json($order);
     }
 
