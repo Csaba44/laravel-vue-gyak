@@ -655,3 +655,4 @@ const addProduct = () => {
 };
 ```
 
+Későbbi bővítés: localStorage-ba menteni a kosár adatait.
