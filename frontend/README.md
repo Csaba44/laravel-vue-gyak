@@ -535,3 +535,123 @@ const userStore = useUserStore();
   <h1>Hi, {{ userStore.user?.name || "Guest" }}</h1>
 </template>
 ```
+
+### Termékek
+A termék oldalon v-for segítségével hozom létre a ProductCard komponenseket. Ezek egy product objectet kapnak, mint prop.
+
+A betöltés kezeléséhez, és az átláthatóság illetve jobb kód csoportosítás érdekében létrehoztam egy ProductStore-t is Piniaval.
+
+Három állapota van:
+- isLoaded: Betöltött e már az adat, amég nem mutassuk a loadingot
+- products: lista, az adatoknak
+- error: Ha van hiba, akkor a hibát tartalmazza, ha nem, akkor null
+
+Két action-je van egy terméknek:
+- fetchProducts: lekér minden terméket, kezeli a hibát.
+- getMaxProductCount: paraméterként kap egy productId-t, ami alapján megkeresi a lekért productokból amit a user hozzáadna a kosárhoz, visszaadja hány van belőle. Ha hiba van, -1/-2 értékekkel tér vissza, ezek sorrendben: a termékek lista null/nincs ilyen termék
+
+```
+import { defineStore } from "pinia";
+import api from "../../api";
+
+export const useProductStore = defineStore("product", {
+  state: () => ({
+    isLoaded: false,
+    products: null,
+    error: null,
+  }),
+  actions: {
+    async fetchProducts() {
+      try {
+        const response = await api.get("/products");
+        this.products = response.data;
+      } catch (error) {
+        this.products = null;
+        this.error = "Hiba történt: " + error;
+      } finally {
+        this.isLoaded = true;
+      }
+    },
+    getMaxProductCount(productId) {
+      if (this.products == null) return -1;
+      const product = this.products.filter((p) => p.id == productId)[0];
+      if (!product) return -2;
+
+      return product.stock_count;
+    },
+  },
+});
+```
+
+Emellett egy BasketStore-t is létrehoztam, ami a kosár tartalmát hivatott tárolni és módosítani.
+
+Mindösszesen a products lista az állapota, ami tartalmazza a kosárba helyezett termékeket a következő formában: 
+`{product_id: 13, count: 2}`
+
+Két dolgot tud végezni emellett, hozzáadni terméket, és lekérni, hogy hány darab van a kosárban 1 termékből.
+
+```
+import { defineStore } from "pinia";
+import { useProductStore } from "./product";
+
+export const useBasketStore = defineStore("basket", {
+  state: () => ({
+    products: [],
+  }),
+  actions: {
+    addProduct(id, count) {
+      var index = -1;
+      this.products.find(function (item, i) {
+        if (item.product_id === id) {
+          index = i;
+          return i;
+        }
+      });
+
+      const productStore = useProductStore();
+      const maxCount = productStore.getMaxProductCount(id);
+      if (maxCount < 0) return; // -1 ha a products null, -2 ha nincs olyan product
+
+      if (index !== -1) {
+        if (this.products[index].count < maxCount) this.products[index].count++;
+        else return false;
+      } else {
+        if (maxCount >= 1) this.products.push({ product_id: id, count: count });
+        else return false;
+      }
+
+      return true;
+    },
+    getCount(id) {
+      const product = this.products.find((p) => p.product_id == id);
+
+      if (!product) return -1;
+
+      return product.count;
+    },
+  },
+});
+```
+
+A ProductCard-ban ezeket használtam fel, beállítottam a termékeknek egy állapotot, hogy elfogyott, hamarosan elfogyik (<=10) vagy elérhető.
+Kaptak egy gombot, "Kosárhoz (x)" ahol x az a mennyiség, ahány darabot raktak kosárba (több gombnyomás).
+
+Ez egy computed érték:
+```
+const basketProductCount = computed(() => {
+  const c = basketStore.getCount(props.product.id);
+  if (c == -1) return 0; // Ha nincs ilyen termék
+  return c;
+});
+```
+
+Illetve egy limitReached ref segítéségével értem el azt, hogy ha a raktárkészlet teljes mennyiségét kosárba raktuk, akkor azt írja, hogy elértük a maxiumomt, és a gomb disabled legyen.
+
+
+```
+const addProduct = () => {
+  const addResult = basketStore.addProduct(props.product.id, 1); // False = hozzáadtuk mindet
+  if (!addResult) limitReached.value = true;
+};
+```
+

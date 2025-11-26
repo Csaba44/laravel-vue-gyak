@@ -9,7 +9,7 @@ export const useBasketStore = defineStore("basket", {
     addProduct(id, count) {
       var index = -1;
       this.products.find(function (item, i) {
-        if (item.id === id) {
+        if (item.product_id === id) {
           index = i;
           return i;
         }
@@ -23,14 +23,14 @@ export const useBasketStore = defineStore("basket", {
         if (this.products[index].count < maxCount) this.products[index].count++;
         else return false;
       } else {
-        if (maxCount >= 1) this.products.push({ id, count });
+        if (maxCount >= 1) this.products.push({ product_id: id, count: count });
         else return false;
       }
 
       return true;
     },
     getCount(id) {
-      const product = this.products.find((p) => p.id == id);
+      const product = this.products.find((p) => p.product_id == id);
 
       if (!product) return -1;
 

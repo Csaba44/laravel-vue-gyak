@@ -25,12 +25,12 @@ if (props.product.stock_count <= 10 && props.product.stock_count > 0) stockColor
 
 const basketProductCount = computed(() => {
   const c = basketStore.getCount(props.product.id);
-  if (c == -1) return 0;
+  if (c == -1) return 0; // Ha nincs ilyen termék
   return c;
 });
 
 const addProduct = () => {
-  const addResult = basketStore.addProduct(props.product.id, 1);
+  const addResult = basketStore.addProduct(props.product.id, 1); // False = hozzáadtuk mindet
   if (!addResult) limitReached.value = true;
 };
 </script>
@@ -41,7 +41,7 @@ const addProduct = () => {
     <p class="font-bold">{{ product.price }} Ft</p>
     <p :class="'font-medium' + ' ' + stockColor">{{ stockText }}</p>
     <div class="w-full flex justify-center mt-5">
-      <Button :disabled="props.product.stock_count <= 0" @click="addProduct()">{{limitReached ? "Elérte a maximumot" : "Kosárhoz"}} ({{ basketProductCount }})</Button>
+      <Button :disabled="props.product.stock_count <= 0 || limitReached" @click="addProduct()">{{limitReached ? "Elérte a maximumot" : "Kosárhoz"}} ({{ basketProductCount }})</Button>
     </div>
   </div>
 </template>
